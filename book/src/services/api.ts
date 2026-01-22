@@ -1,0 +1,178 @@
+/**
+ * API client for backend communication
+ */
+
+import axios, { AxiosInstance, AxiosError } from 'axios';
+
+// API base URL - use environment variable or default to localhost
+const API_BASE_URL = process.env.BACKEND_URL || 'http://localhost:8000';
+
+// Create axios instance with default config
+const apiClient: AxiosInstance = axios.create({
+  baseURL: `${API_BASE_URL}/api/v1`,
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  withCredentials: true, // Send cookies for auth
+});
+
+// Request interceptor for adding auth token
+apiClient.interceptors.request.use(
+  (config) => {
+    // Auth token is handled via cookies (Better-Auth)
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor for error handling
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError<{ error: string; message: string }>) => {
+    if (error.response) {
+      // Server responded with error status
+      const { status, data } = error.response;
+      console.error(`API Error [${status}]:`, data?.message || error.message);
+
+      if (status === 401) {
+        // Handle unauthorized - could trigger login redirect
+        console.warn('Unauthorized - session may have expired');
+      }
+    } else if (error.request) {
+      // Request made but no response received
+      console.error('Network error - no response received');
+    } else {
+      // Error setting up request
+      console.error('Request error:', error.message);
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+// API types
+export interface ChatSession {
+  id: string;
+  user_id: string | null;
+  context_chapter: string | null;
+  created_at: string;
+  last_message_at: string;
+}
+
+export interface Citation {
+  chapter_id: string;
+  section_id: string;
+  section_title: string;
+  relevance_score: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  citations: Citation[];
+  created_at: string;
+}
+
+export interface ChatResponse {
+  message: ChatMessage;
+  session: ChatSession;
+}
+
+export interface SearchResult {
+  chunk_id: string;
+  chapter_id: string;
+  section_id: string;
+  section_title: string;
+  content_preview: string;
+  has_code: boolean;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  score: number;
+}
+
+// Chat API
+export const chatApi = {
+  createSession: async (contextChapter?: string): Promise<ChatSession> => {
+    const response = await apiClient.post<ChatSession>('/chat/sessions', {
+      context_chapter: contextChapter,
+    });
+    return response.data;
+  },
+
+  getMessages: async (
+    sessionId: string,
+    limit?: number,
+    before?: string
+  ): Promise<{ messages: ChatMessage[]; has_more: boolean }> => {
+    const response = await apiClient.get(`/chat/sessions/${sessionId}/messages`, {
+      params: { limit, before },
+    });
+    return response.data;
+  },
+
+  sendMessage: async (
+    sessionId: string,
+    content: string,
+    selectedText?: string
+  ): Promise<ChatResponse> => {
+    const response = await apiClient.post<ChatResponse>(
+      `/chat/sessions/${sessionId}/messages`,
+      {
+        content,
+        selected_text: selectedText,
+      }
+    );
+    return response.data;
+  },
+};
+
+// Search API
+export const searchApi = {
+  search: async (
+    query: string,
+    options?: {
+      chapter_id?: string;
+      difficulty?: 'beginner' | 'intermediate' | 'advanced';
+      limit?: number;
+    }
+  ): Promise<{ results: SearchResult[]; query: string }> => {
+    const response = await apiClient.get('/search', {
+      params: { q: query, ...options },
+    });
+    return response.data;
+  },
+};
+
+// Content API (personalization & translation)
+export const contentApi = {
+  personalize: async (chapterId: string): Promise<{ content: string; is_rtl: boolean }> => {
+    const response = await apiClient.post('/content/personalize', {
+      chapter_id: chapterId,
+    });
+    return response.data;
+  },
+
+  translate: async (
+    chapterId: string,
+    targetLanguage: 'urdu'
+  ): Promise<{ content: string; is_rtl: boolean }> => {
+    const response = await apiClient.post('/content/translate', {
+      chapter_id: chapterId,
+      target_language: targetLanguage,
+    });
+    return response.data;
+  },
+};
+
+// Health check
+export const healthApi = {
+  check: async (): Promise<{ status: string; version: string }> => {
+    const response = await apiClient.get('/health');
+    return response.data;
+  },
+};
+
+export default apiClient;

@@ -1,0 +1,330 @@
+openapi: 3.1.0
+info:
+  title: Physical AI Textbook - Chatbot API
+  description: RAG-based chatbot API for the Physical AI & Humanoid Robotics Textbook
+  version: 1.0.0
+  contact:
+    name: Hackathon Team
+
+servers:
+  - url: /api/v1
+    description: Backend API
+
+tags:
+  - name: chat
+    description: Chatbot conversation endpoints
+  - name: search
+    description: Content search endpoints
+
+paths:
+  /chat/sessions:
+    post:
+      tags: [chat]
+      summary: Create a new chat session
+      description: |
+        Creates a new conversation session. Optionally associates with a user
+        if authentication token is provided.
+      operationId: createChatSession
+      security:
+        - bearerAuth: []
+        - {}
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                context_chapter:
+                  type: string
+                  description: Chapter ID being viewed when starting chat
+                  example: ch-1-02
+      responses:
+        '201':
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatSession'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /chat/sessions/{session_id}/messages:
+    get:
+      tags: [chat]
+      summary: Get messages in a session
+      operationId: getChatMessages
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+        - name: before
+          in: query
+          description: Get messages before this message ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Messages retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ChatMessage'
+                  has_more:
+                    type: boolean
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [chat]
+      summary: Send a message and get response
+      description: |
+        Send a user message to the chatbot. The system will:
+        1. Save the user message
+        2. Search the textbook content for relevant context
+        3. Generate a response using the LLM
+        4. Return the assistant response with citations
+      operationId: sendChatMessage
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  minLength: 1
+                  maxLength: 2000
+                  description: User's question or message
+                  example: What is ROS 2 and why is it important for robotics?
+                selected_text:
+                  type: string
+                  maxLength: 5000
+                  description: Text selected by user for contextual questions
+      responses:
+        '200':
+          description: Response generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /search:
+    get:
+      tags: [search]
+      summary: Search textbook content
+      description: |
+        Performs semantic search across all textbook content.
+        Returns relevant chunks with metadata.
+      operationId: searchContent
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search query
+          schema:
+            type: string
+            minLength: 3
+            maxLength: 500
+        - name: chapter_id
+          in: query
+          description: Limit search to specific chapter
+          schema:
+            type: string
+        - name: difficulty
+          in: query
+          description: Filter by difficulty level
+          schema:
+            type: string
+            enum: [beginner, intermediate, advanced]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 5
+            maximum: 20
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SearchResult'
+                  query:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Session token from Better-Auth
+
+  parameters:
+    SessionId:
+      name: session_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalError:
+      description: Server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    ChatSession:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+          nullable: true
+        context_chapter:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        last_message_at:
+          type: string
+          format: date-time
+
+    ChatMessage:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+        citations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Citation'
+        created_at:
+          type: string
+          format: date-time
+
+    ChatResponse:
+      type: object
+      properties:
+        message:
+          $ref: '#/components/schemas/ChatMessage'
+        session:
+          $ref: '#/components/schemas/ChatSession'
+
+    Citation:
+      type: object
+      properties:
+        chapter_id:
+          type: string
+          example: ch-1-02
+        section_id:
+          type: string
+          example: ros2-nodes
+        section_title:
+          type: string
+          example: Understanding ROS 2 Nodes
+        relevance_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+
+    SearchResult:
+      type: object
+      properties:
+        chunk_id:
+          type: string
+          format: uuid
+        chapter_id:
+          type: string
+        section_id:
+          type: string
+        section_title:
+          type: string
+        content_preview:
+          type: string
+          description: First 200 characters of chunk
+        has_code:
+          type: boolean
+        difficulty:
+          type: string
+          enum: [beginner, intermediate, advanced]
+        score:
+          type: number
+          format: float
+          description: Similarity score (0-1)
+
+    Error:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          description: Error code
+          example: invalid_request
+        message:
+          type: string
+          description: Human-readable message
+          example: Query must be at least 3 characters
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error context

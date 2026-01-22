@@ -1,0 +1,15 @@
+/* Navbar Content custom styles */
+
+.colorModeToggle {
+  margin-right: 8px;
+}
+
+.userMenuWrapper {
+  margin-left: 8px;
+}
+
+@media (max-width: 996px) {
+  .userMenuWrapper {
+    margin-left: 4px;
+  }
+}

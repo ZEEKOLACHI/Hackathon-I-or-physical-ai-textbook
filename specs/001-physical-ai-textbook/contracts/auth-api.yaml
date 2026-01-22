@@ -1,0 +1,408 @@
+openapi: 3.1.0
+info:
+  title: Physical AI Textbook - Auth API
+  description: |
+    Authentication API using Better-Auth library.
+    Note: Better-Auth handles most auth endpoints automatically.
+    This documents the custom endpoints and user profile extensions.
+  version: 1.0.0
+
+servers:
+  - url: /api/v1
+    description: Backend API
+
+tags:
+  - name: auth
+    description: Authentication endpoints (Better-Auth managed)
+  - name: users
+    description: User profile management
+
+paths:
+  /auth/signup:
+    post:
+      tags: [auth]
+      summary: Register a new user
+      description: |
+        Creates a new user account with email, password, and background profile.
+        Handled by Better-Auth with custom fields.
+      operationId: signUp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignUpRequest'
+      responses:
+        '201':
+          description: User created and logged in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+          headers:
+            Set-Cookie:
+              description: Session cookie
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/signin:
+    post:
+      tags: [auth]
+      summary: Sign in existing user
+      description: Authenticates user with email and password
+      operationId: signIn
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignInRequest'
+      responses:
+        '200':
+          description: Successfully authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+          headers:
+            Set-Cookie:
+              description: Session cookie
+              schema:
+                type: string
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/signout:
+    post:
+      tags: [auth]
+      summary: Sign out current user
+      description: Invalidates the current session
+      operationId: signOut
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Successfully signed out
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/session:
+    get:
+      tags: [auth]
+      summary: Get current session
+      description: Returns the current user if authenticated
+      operationId: getSession
+      security:
+        - sessionCookie: []
+        - {}
+      responses:
+        '200':
+          description: Session info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                    nullable: true
+                  session:
+                    $ref: '#/components/schemas/Session'
+                    nullable: true
+
+  /users/me:
+    get:
+      tags: [users]
+      summary: Get current user profile
+      operationId: getCurrentUser
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    patch:
+      tags: [users]
+      summary: Update current user profile
+      description: Update background information
+      operationId: updateCurrentUser
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfileUpdate'
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /content/personalize:
+    post:
+      tags: [users]
+      summary: Personalize chapter content
+      description: |
+        Generates personalized chapter content based on user's background.
+        Returns cached version if available.
+      operationId: personalizeContent
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [chapter_id]
+              properties:
+                chapter_id:
+                  type: string
+                  example: ch-1-02
+      responses:
+        '200':
+          description: Personalized content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentVariant'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Chapter not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /content/translate:
+    post:
+      tags: [users]
+      summary: Translate chapter to Urdu
+      description: |
+        Translates chapter content to Urdu while preserving code blocks.
+        Returns cached version if available. Does not require authentication.
+      operationId: translateContent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [chapter_id, target_language]
+              properties:
+                chapter_id:
+                  type: string
+                  example: ch-1-02
+                target_language:
+                  type: string
+                  enum: [urdu]
+                  description: Target language (only Urdu supported)
+      responses:
+        '200':
+          description: Translated content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentVariant'
+        '404':
+          description: Chapter not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: better-auth.session_token
+      description: Better-Auth session cookie
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    SignUpRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: learner@example.com
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+          example: securepassword123
+        programming_level:
+          type: string
+          enum: [none, beginner, intermediate, advanced]
+          default: beginner
+        robotics_level:
+          type: string
+          enum: [none, beginner, intermediate, advanced]
+          default: beginner
+        hardware_available:
+          type: array
+          items:
+            type: string
+          example: ["jetson_nano", "simulation_only"]
+
+    SignInRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        session:
+          $ref: '#/components/schemas/Session'
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        created_at:
+          type: string
+          format: date-time
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        programming_level:
+          type: string
+          enum: [none, beginner, intermediate, advanced]
+        robotics_level:
+          type: string
+          enum: [none, beginner, intermediate, advanced]
+        hardware_available:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    UserProfileUpdate:
+      type: object
+      properties:
+        programming_level:
+          type: string
+          enum: [none, beginner, intermediate, advanced]
+        robotics_level:
+          type: string
+          enum: [none, beginner, intermediate, advanced]
+        hardware_available:
+          type: array
+          items:
+            type: string
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        expires_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    ContentVariant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        chapter_id:
+          type: string
+        variant_type:
+          type: string
+          enum: [personalized, translated]
+        variant_key:
+          type: string
+          description: Level (beginner/etc) or language (urdu)
+        content:
+          type: string
+          description: Transformed Markdown content
+        is_rtl:
+          type: boolean
+          description: Whether content should render right-to-left
+        created_at:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          example: unauthorized
+        message:
+          type: string
+          example: Authentication required

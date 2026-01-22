@@ -1,0 +1,100 @@
+/* ErrorNotification styles */
+
+.notification {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Error variant */
+.error {
+  background: var(--ifm-color-danger-lightest, #fef2f2);
+  border: 1px solid var(--ifm-color-danger-light, #fecaca);
+  color: var(--ifm-color-danger-darkest, #7f1d1d);
+}
+
+/* Warning variant */
+.warning {
+  background: var(--ifm-color-warning-lightest, #fffbeb);
+  border: 1px solid var(--ifm-color-warning-light, #fde68a);
+  color: var(--ifm-color-warning-darkest, #78350f);
+}
+
+/* Info variant */
+.info {
+  background: var(--ifm-color-info-lightest, #eff6ff);
+  border: 1px solid var(--ifm-color-info-light, #bfdbfe);
+  color: var(--ifm-color-info-darkest, #1e3a8a);
+}
+
+.icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.message {
+  flex: 1;
+}
+
+.dismissButton {
+  background: none;
+  border: none;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  color: inherit;
+}
+
+.dismissButton:hover {
+  opacity: 1;
+}
+
+/* Toast-style positioning (for global notifications) */
+.toastContainer {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  max-width: 400px;
+  width: calc(100% - 40px);
+}
+
+.toastContainer .notification {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  margin-bottom: 10px;
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+  .notification {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .toastContainer {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+    max-width: none;
+  }
+}
