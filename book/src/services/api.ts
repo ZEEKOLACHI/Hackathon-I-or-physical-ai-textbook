@@ -4,8 +4,25 @@
 
 import axios, { AxiosInstance, AxiosError } from 'axios';
 
-// API base URL - use environment variable or default to localhost
-const API_BASE_URL = process.env.BACKEND_URL || 'http://localhost:8000';
+// Get backend URL from Docusaurus config or fallback
+const getBackendUrl = (): string => {
+  // In browser, try to get from Docusaurus config
+  if (typeof window !== 'undefined') {
+    try {
+      // Access the global docusaurus data if available
+      const docusaurusData = (window as any).__DOCUSAURUS__;
+      if (docusaurusData?.siteConfig?.customFields?.backendUrl) {
+        return docusaurusData.siteConfig.customFields.backendUrl;
+      }
+    } catch (e) {
+      // Fallback silently
+    }
+  }
+  // Default: production URL (will be overridden in dev by local proxy or direct calls)
+  return 'https://physical-ai-backend.vercel.app';
+};
+
+const API_BASE_URL = getBackendUrl();
 
 // Create axios instance with default config
 const apiClient: AxiosInstance = axios.create({

@@ -2,6 +2,9 @@ import { themes as prismThemes } from 'prism-react-renderer';
 import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
+// Backend URL - set via BACKEND_URL env var at build time
+const backendUrl = process.env.BACKEND_URL || 'https://physical-ai-backend.vercel.app';
+
 const config: Config = {
   title: 'Physical AI & Humanoid Robotics',
   tagline: 'From Theory to Simulation',
@@ -10,8 +13,12 @@ const config: Config = {
   url: 'https://physical-ai-textbook.vercel.app',
   baseUrl: '/',
 
-  organizationName: 'hackathon-team',
-  projectName: 'physical-ai-textbook',
+  organizationName: 'ZEEKOLACHI',
+  projectName: 'Hackathon-I-or-physical-ai-textbook',
+
+  customFields: {
+    backendUrl: backendUrl,
+  },
 
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
