@@ -35,8 +35,8 @@ class Settings(BaseSettings):
     better_auth_url: str = "http://localhost:3000"
 
     # Backend
-    backend_url: str = "http://localhost:8000"
-    cors_origins: str = "http://localhost:3000"
+    backend_url: str = "https://physical-ai-backend.vercel.app"
+    cors_origins: str = "https://physical-ai-textbook.vercel.app,http://localhost:3000"
 
     # Development
     debug: bool = False

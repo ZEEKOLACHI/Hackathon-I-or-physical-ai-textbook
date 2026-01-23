@@ -3,17 +3,21 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.config import settings
 
 # Create async engine for Neon Postgres
+# Use NullPool for serverless environments (Vercel)
 engine = create_async_engine(
     settings.database_url,
     echo=settings.debug,
     pool_pre_ping=True,
-    pool_size=5,
-    max_overflow=10,
+    pool_size=1,
+    max_overflow=2,
+    pool_timeout=30,
+    pool_recycle=300,
 )
 
 # Session factory
@@ -53,7 +57,7 @@ async def init_db() -> None:
     """Initialize database connection."""
     async with engine.begin() as conn:
         # Connection test
-        await conn.execute("SELECT 1")
+        await conn.execute(text("SELECT 1"))
 
 
 async def close_db() -> None:
