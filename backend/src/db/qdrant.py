@@ -17,7 +17,7 @@ from src.config import settings
 
 # Collection configuration
 COLLECTION_NAME = "textbook_content"
-VECTOR_SIZE = 1536  # OpenAI text-embedding-3-small dimension
+VECTOR_SIZE = 768  # Google text-embedding-004 dimension
 
 # Initialize Qdrant client
 qdrant_client: QdrantClient | None = None

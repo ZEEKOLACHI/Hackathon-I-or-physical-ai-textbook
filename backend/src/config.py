@@ -20,8 +20,8 @@ class Settings(BaseSettings):
         case_sensitive=False,
     )
 
-    # OpenAI
-    openai_api_key: str = ""
+    # Google AI (Gemini)
+    google_api_key: str = ""
 
     # Qdrant
     qdrant_url: str = ""

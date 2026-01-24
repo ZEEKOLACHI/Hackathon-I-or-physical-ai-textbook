@@ -10,8 +10,8 @@ alembic>=1.13.0
 # Vector database
 qdrant-client>=1.7.0
 
-# OpenAI
-openai>=1.10.0
+# Google AI (Gemini)
+google-generativeai>=0.8.0
 
 # Configuration
 python-dotenv>=1.0.0
