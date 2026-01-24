@@ -7,7 +7,7 @@ const backendUrl = process.env.BACKEND_URL || 'https://physical-ai-backend.verce
 
 const config: Config = {
   title: 'Physical AI & Humanoid Robotics',
-  tagline: 'From Theory to Simulation',
+  tagline: 'Master Robotics Through Simulation',
   favicon: 'img/logo.svg',
 
   url: 'https://physical-ai-textbook.vercel.app',
