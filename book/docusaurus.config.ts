@@ -100,9 +100,9 @@ const config: Config = {
       additionalLanguages: ['bash', 'yaml', 'python', 'json'],
     },
     colorMode: {
-      defaultMode: 'light',
+      defaultMode: 'dark',
       disableSwitch: false,
-      respectPrefersColorScheme: true,
+      respectPrefersColorScheme: false,
     },
   } satisfies Preset.ThemeConfig,
 };

@@ -49,8 +49,8 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
       } else {
         setProfile(null);
       }
-    } catch (error) {
-      console.error('Failed to refresh session:', error);
+    } catch {
+      // Silently handle session refresh failures (backend unavailable or not logged in)
       setUser(null);
       setProfile(null);
     } finally {

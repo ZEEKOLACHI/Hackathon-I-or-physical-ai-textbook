@@ -49,21 +49,25 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError<{ error: string; message: string }>) => {
-    if (error.response) {
-      // Server responded with error status
-      const { status, data } = error.response;
-      console.error(`API Error [${status}]:`, data?.message || error.message);
+    // Silently handle expected errors (auth checks, backend unavailable)
+    const isAuthEndpoint = error.config?.url?.includes('/auth/');
+    const isNetworkError = !error.response;
 
-      if (status === 401) {
-        // Handle unauthorized - could trigger login redirect
-        console.warn('Unauthorized - session may have expired');
+    if (error.response) {
+      const { status } = error.response;
+      // Don't log 401/404 on auth endpoints - these are expected when not logged in
+      if (!(isAuthEndpoint && (status === 401 || status === 404))) {
+        // Only log unexpected errors in development
+        if (process.env.NODE_ENV === 'development') {
+          console.debug(`API Error [${status}]:`, error.message);
+        }
       }
-    } else if (error.request) {
-      // Request made but no response received
-      console.error('Network error - no response received');
-    } else {
-      // Error setting up request
-      console.error('Request error:', error.message);
+    } else if (isNetworkError) {
+      // Silently handle network errors (backend unavailable)
+      // Only log in development if it's not an auth check
+      if (process.env.NODE_ENV === 'development' && !isAuthEndpoint) {
+        console.debug('Backend unavailable');
+      }
     }
 
     return Promise.reject(error);
