@@ -11,7 +11,7 @@ from src.api.middleware.rate_limiter import RateLimitMiddleware
 from src.api.routes import auth, chat, health, personalize, translate, users
 from src.config import settings
 from src.db.postgres import close_db, init_db
-from src.db.qdrant import close_qdrant, init_qdrant
+from src.db.vector_store import close_store, init_store
 
 
 @asynccontextmanager
@@ -24,9 +24,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         print(f"Warning: Database init failed (will retry on first request): {e}")
 
     try:
-        await init_qdrant()
+        await init_store()
     except Exception as e:
-        print(f"Warning: Qdrant init failed (will retry on first request): {e}")
+        print(f"Warning: Vector store init failed (will retry on first request): {e}")
 
     yield
 
@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception:
         pass
     try:
-        await close_qdrant()
+        await close_store()
     except Exception:
         pass
 
