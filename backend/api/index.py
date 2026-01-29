@@ -10,4 +10,5 @@ sys.path.insert(0, str(backend_dir))
 from src.main import app
 
 # Export the FastAPI app for Vercel
-handler = app
+# Vercel expects 'app' to be the ASGI application
+app = app

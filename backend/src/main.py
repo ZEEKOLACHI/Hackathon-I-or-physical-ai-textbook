@@ -68,13 +68,22 @@ def create_app() -> FastAPI:
     # Error handlers
     setup_error_handlers(app)
 
-    # Routes
+    # Root endpoint
+    @app.get("/")
+    async def root():
+        return {"status": "healthy", "message": "Physical AI Textbook API"}
+
+    # Routes - with /api/v1 prefix
     app.include_router(health.router, prefix="/api/v1", tags=["health"])
     app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
     app.include_router(users.router, prefix="/api/v1", tags=["users"])
     app.include_router(chat.router, prefix="/api/v1", tags=["chat", "search"])
     app.include_router(personalize.router, prefix="/api/v1", tags=["content"])
     app.include_router(translate.router, prefix="/api/v1", tags=["content"])
+
+    # Also mount at root for Vercel compatibility
+    app.include_router(health.router, tags=["health"])
+    app.include_router(chat.router, tags=["chat", "search"])
 
     return app
 
