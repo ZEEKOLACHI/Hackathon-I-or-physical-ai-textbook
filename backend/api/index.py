@@ -3,12 +3,21 @@
 import sys
 from pathlib import Path
 
-# Add the backend src directory to the Python path
+# Add the backend directory to Python path
 backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
 
-from src.main import app
+try:
+    from src.main import app
+except Exception as e:
+    # Fallback app if import fails
+    from fastapi import FastAPI
+    app = FastAPI()
 
-# Export the FastAPI app for Vercel
-# Vercel expects 'app' to be the ASGI application
-app = app
+    @app.get("/")
+    async def root():
+        return {"error": "Import failed", "message": str(e)}
+
+    @app.get("/health")
+    async def health():
+        return {"status": "error", "message": str(e)}
