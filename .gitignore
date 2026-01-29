@@ -58,4 +58,13 @@ coverage/
 *.temp
 .vercel
 
-.vercel
+# Database
+*.db
+vector_store.json
+
+# Claude Code
+.claude/
+
+# Playwright
+playwright-report/
+test-results/
