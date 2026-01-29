@@ -9,7 +9,7 @@ _initialized = False
 _model = None
 
 # Model configuration
-CHAT_MODEL = "gemini-1.5-flash"
+CHAT_MODEL = "gemini-2.5-flash"
 MAX_TOKENS = 1024
 TEMPERATURE = 0.7
 

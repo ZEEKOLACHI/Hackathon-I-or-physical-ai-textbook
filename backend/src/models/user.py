@@ -5,8 +5,8 @@ from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, func
-from sqlalchemy.dialects.postgresql import ARRAY, UUID
+from sqlalchemy import DateTime, ForeignKey, JSON, String, Text, func
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.models.base import Base, TimestampMixin, UUIDMixin
@@ -52,7 +52,7 @@ class User(Base, UUIDMixin, TimestampMixin):
         nullable=False,
     )
     hardware_available: Mapped[list[str] | None] = mapped_column(
-        ARRAY(String),
+        JSON,
         nullable=True,
         default=list,
     )
