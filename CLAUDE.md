@@ -119,11 +119,14 @@ Before any PR:
 - Phase 8: Polish (T090-T095, T097)
 
 ### Pending
-- T058: Run content indexing script
-- T059: Verify chatbot answers with citations
-- T096: Validate <10s chatbot response
-- T098: Run quickstart.md verification
-- T099: Final Vercel deployment
+- None - All tasks complete!
+
+### Recently Completed
+- T058: Content indexing (1629 vectors)
+- T059: Chatbot citations verified
+- T096: Response time validated (5.25s avg)
+- T098: Quickstart verification passed
+- T099: Deployed to https://physical-ai-textbook.vercel.app
 
 ## Key Files Reference
 
