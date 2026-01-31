@@ -1,20 +1,30 @@
-"""Neon Postgres database connection and session management."""
+"""Database connection and session management (Postgres or SQLite)."""
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.config import settings
 
-# Create async engine for Neon Postgres
-engine = create_async_engine(
-    settings.database_url,
-    echo=settings.debug,
-    pool_pre_ping=True,
-    pool_size=5,
-    max_overflow=10,
-)
+# Detect SQLite (no connection pooling support)
+_is_sqlite = settings.database_url.startswith("sqlite")
+
+_engine_kwargs: dict = {
+    "echo": settings.debug,
+}
+
+if not _is_sqlite:
+    _engine_kwargs.update(
+        pool_pre_ping=True,
+        pool_size=1,
+        max_overflow=2,
+        pool_timeout=30,
+        pool_recycle=300,
+    )
+
+engine = create_async_engine(settings.database_url, **_engine_kwargs)
 
 # Session factory
 async_session_factory = async_sessionmaker(
@@ -50,10 +60,14 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_db() -> None:
-    """Initialize database connection."""
+    """Initialize database connection and create tables for local dev."""
+    from src.models import Base  # noqa: F811
+
     async with engine.begin() as conn:
+        # Auto-create tables (idempotent)
+        await conn.run_sync(Base.metadata.create_all)
         # Connection test
-        await conn.execute("SELECT 1")
+        await conn.execute(text("SELECT 1"))
 
 
 async def close_db() -> None:

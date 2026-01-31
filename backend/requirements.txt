@@ -7,11 +7,14 @@ sqlalchemy[asyncio]>=2.0.25
 asyncpg>=0.29.0
 alembic>=1.13.0
 
-# Vector database
-qdrant-client>=1.7.0
+# Vector store (local numpy-based)
+numpy>=1.26.0
 
-# OpenAI
-openai>=1.10.0
+# SQLite async support
+aiosqlite>=0.19.0
+
+# Google AI (Gemini)
+google-generativeai>=0.8.0
 
 # Configuration
 python-dotenv>=1.0.0

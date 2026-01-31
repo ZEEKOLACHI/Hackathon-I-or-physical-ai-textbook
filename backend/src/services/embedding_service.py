@@ -1,23 +1,23 @@
-"""Embedding service using OpenAI text-embedding-3-small model."""
+"""Embedding service using Google AI text-embedding-004 model."""
 
-from openai import AsyncOpenAI
+import google.generativeai as genai
 
 from src.config import settings
 
-# OpenAI client
-_client: AsyncOpenAI | None = None
+# Initialize Google AI
+_initialized = False
 
 # Embedding model configuration
-EMBEDDING_MODEL = "text-embedding-3-small"
-EMBEDDING_DIMENSIONS = 1536
+EMBEDDING_MODEL = "models/text-embedding-004"
+EMBEDDING_DIMENSIONS = 768  # Google's embedding dimension
 
 
-def get_openai_client() -> AsyncOpenAI:
-    """Get or create OpenAI client instance."""
-    global _client
-    if _client is None:
-        _client = AsyncOpenAI(api_key=settings.openai_api_key)
-    return _client
+def _init_google_ai() -> None:
+    """Initialize Google AI client."""
+    global _initialized
+    if not _initialized:
+        genai.configure(api_key=settings.google_api_key)
+        _initialized = True
 
 
 async def get_embedding(text: str) -> list[float]:
@@ -30,12 +30,13 @@ async def get_embedding(text: str) -> list[float]:
     Returns:
         Embedding vector as list of floats
     """
-    client = get_openai_client()
-    response = await client.embeddings.create(
+    _init_google_ai()
+    result = genai.embed_content(
         model=EMBEDDING_MODEL,
-        input=text,
+        content=text,
+        task_type="retrieval_document",
     )
-    return response.data[0].embedding
+    return result["embedding"]
 
 
 async def get_embeddings(texts: list[str]) -> list[list[float]]:
@@ -51,14 +52,19 @@ async def get_embeddings(texts: list[str]) -> list[list[float]]:
     if not texts:
         return []
 
-    client = get_openai_client()
-    response = await client.embeddings.create(
-        model=EMBEDDING_MODEL,
-        input=texts,
-    )
-    # Sort by index to maintain order
-    sorted_data = sorted(response.data, key=lambda x: x.index)
-    return [item.embedding for item in sorted_data]
+    _init_google_ai()
+    embeddings = []
+
+    # Google AI supports batch embedding
+    for text in texts:
+        result = genai.embed_content(
+            model=EMBEDDING_MODEL,
+            content=text,
+            task_type="retrieval_document",
+        )
+        embeddings.append(result["embedding"])
+
+    return embeddings
 
 
 def chunk_text(

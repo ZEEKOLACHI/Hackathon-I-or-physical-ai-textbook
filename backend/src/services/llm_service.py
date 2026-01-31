@@ -1,14 +1,15 @@
-"""LLM service for chat completions using OpenAI."""
+"""LLM service for chat completions using Google Gemini."""
 
-from openai import AsyncOpenAI
+import google.generativeai as genai
 
 from src.config import settings
 
-# OpenAI client
-_client: AsyncOpenAI | None = None
+# Initialize Google AI
+_initialized = False
+_model = None
 
 # Model configuration
-CHAT_MODEL = "gpt-4o-mini"
+CHAT_MODEL = "gemini-2.5-flash"
 MAX_TOKENS = 1024
 TEMPERATURE = 0.7
 
@@ -34,12 +35,21 @@ When answering questions:
 Format your responses with clear structure using markdown when helpful."""
 
 
-def get_openai_client() -> AsyncOpenAI:
-    """Get or create OpenAI client instance."""
-    global _client
-    if _client is None:
-        _client = AsyncOpenAI(api_key=settings.openai_api_key)
-    return _client
+def _init_google_ai():
+    """Initialize Google AI client and model."""
+    global _initialized, _model
+    if not _initialized:
+        genai.configure(api_key=settings.google_api_key)
+        _model = genai.GenerativeModel(
+            CHAT_MODEL,
+            system_instruction=SYSTEM_PROMPT,
+            generation_config=genai.GenerationConfig(
+                max_output_tokens=MAX_TOKENS,
+                temperature=TEMPERATURE,
+            ),
+        )
+        _initialized = True
+    return _model
 
 
 async def generate_response(
@@ -58,37 +68,34 @@ async def generate_response(
     Returns:
         Generated response text
     """
-    client = get_openai_client()
+    model = _init_google_ai()
 
-    # Build messages list
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    # Build prompt with context
+    prompt_parts = []
 
-    # Add context as a system message
     if context:
-        context_message = (
+        prompt_parts.append(
             "Here is relevant content from the textbook that may help answer "
             f"the user's question:\n\n{context}\n\n"
             "Use this information to provide an accurate, well-cited response."
         )
-        messages.append({"role": "system", "content": context_message})
 
     # Add conversation history
     if conversation_history:
+        prompt_parts.append("\nPrevious conversation:")
         for msg in conversation_history[-6:]:  # Keep last 6 messages for context
-            messages.append({"role": msg["role"], "content": msg["content"]})
+            role = "User" if msg["role"] == "user" else "Assistant"
+            prompt_parts.append(f"{role}: {msg['content']}")
 
     # Add current user message
-    messages.append({"role": "user", "content": user_message})
+    prompt_parts.append(f"\nUser question: {user_message}")
+
+    full_prompt = "\n".join(prompt_parts)
 
     # Generate response
-    response = await client.chat.completions.create(
-        model=CHAT_MODEL,
-        messages=messages,
-        max_tokens=MAX_TOKENS,
-        temperature=TEMPERATURE,
-    )
+    response = model.generate_content(full_prompt)
 
-    return response.choices[0].message.content or ""
+    return response.text or ""
 
 
 async def generate_response_with_selected_text(
@@ -107,26 +114,15 @@ async def generate_response_with_selected_text(
     Returns:
         Generated response text
     """
-    client = get_openai_client()
+    model = _init_google_ai()
 
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {
-            "role": "system",
-            "content": (
-                "The user has selected the following text from the textbook and "
-                f"has a question about it:\n\n---\nSelected Text:\n{selected_text}\n---\n\n"
-                f"Additional context:\n{context}"
-            ),
-        },
-        {"role": "user", "content": user_message},
-    ]
-
-    response = await client.chat.completions.create(
-        model=CHAT_MODEL,
-        messages=messages,
-        max_tokens=MAX_TOKENS,
-        temperature=TEMPERATURE,
+    prompt = (
+        "The user has selected the following text from the textbook and "
+        f"has a question about it:\n\n---\nSelected Text:\n{selected_text}\n---\n\n"
+        f"Additional context:\n{context}\n\n"
+        f"User question: {user_message}"
     )
 
-    return response.choices[0].message.content or ""
+    response = model.generate_content(prompt)
+
+    return response.text or ""

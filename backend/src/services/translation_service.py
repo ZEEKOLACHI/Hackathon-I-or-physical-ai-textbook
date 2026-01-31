@@ -1,10 +1,9 @@
 """Translation service for translating chapter content to Urdu."""
 
 import re
-import uuid
 from pathlib import Path
 
-from openai import AsyncOpenAI
+import google.generativeai as genai
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -49,7 +48,7 @@ CHAPTER_FILES = {
 }
 
 # LLM configuration
-TRANSLATION_MODEL = "gpt-4o-mini"
+TRANSLATION_MODEL = "gemini-1.5-flash"
 MAX_TOKENS = 4096
 TEMPERATURE = 0.3  # Lower temperature for more accurate translation
 
@@ -80,16 +79,16 @@ Translate the following technical textbook content from English to Urdu.
 Return ONLY the translated content in Urdu. Do not add any explanations or notes."""
 
 
-# OpenAI client
-_client: AsyncOpenAI | None = None
+# Google AI state
+_initialized = False
 
 
-def get_openai_client() -> AsyncOpenAI:
-    """Get or create OpenAI client instance."""
-    global _client
-    if _client is None:
-        _client = AsyncOpenAI(api_key=settings.openai_api_key)
-    return _client
+def _init_google_ai() -> None:
+    """Initialize Google AI client."""
+    global _initialized
+    if not _initialized:
+        genai.configure(api_key=settings.google_api_key)
+        _initialized = True
 
 
 def get_chapter_path(chapter_id: str) -> Path | None:
@@ -172,7 +171,7 @@ async def translate_content(
     target_language: str,
 ) -> str:
     """Translate content using LLM while preserving code blocks."""
-    client = get_openai_client()
+    _init_google_ai()
 
     # Extract code blocks
     content_with_placeholders, code_blocks = extract_code_blocks(content)
@@ -180,20 +179,17 @@ async def translate_content(
     # Translate the content (with placeholders)
     prompt = TRANSLATION_PROMPT.format(content=content_with_placeholders)
 
-    response = await client.chat.completions.create(
-        model=TRANSLATION_MODEL,
-        messages=[
-            {
-                "role": "system",
-                "content": f"You are an expert English to {target_language.title()} translator for technical content.",
-            },
-            {"role": "user", "content": prompt},
-        ],
-        max_tokens=MAX_TOKENS,
-        temperature=TEMPERATURE,
+    model = genai.GenerativeModel(
+        TRANSLATION_MODEL,
+        generation_config=genai.GenerationConfig(
+            max_output_tokens=MAX_TOKENS,
+            temperature=TEMPERATURE,
+        ),
     )
 
-    translated_with_placeholders = response.choices[0].message.content or content_with_placeholders
+    response = model.generate_content(prompt)
+
+    translated_with_placeholders = response.text or content_with_placeholders
 
     # Restore code blocks
     translated_content = restore_code_blocks(translated_with_placeholders, code_blocks)

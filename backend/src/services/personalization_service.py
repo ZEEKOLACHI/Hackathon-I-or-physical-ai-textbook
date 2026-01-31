@@ -1,10 +1,9 @@
 """Personalization service for adapting chapter content to user background."""
 
-import os
 import uuid
 from pathlib import Path
 
-from openai import AsyncOpenAI
+import google.generativeai as genai
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -51,7 +50,7 @@ CHAPTER_FILES = {
 }
 
 # LLM configuration
-PERSONALIZATION_MODEL = "gpt-4o-mini"
+PERSONALIZATION_MODEL = "gemini-1.5-flash"
 MAX_TOKENS = 4096
 TEMPERATURE = 0.7
 
@@ -93,7 +92,7 @@ Based on the learner's background, adapt the content by:
 - Preserve all code blocks exactly as they are (syntax must remain valid)
 - Maintain the markdown structure (headings, lists, tables)
 - Keep the core educational content accurate
-- Add personalized sections with clear markers like "💡 For your level:" or "🔧 With your hardware:"
+- Add personalized sections with clear markers like "For your level:" or "With your hardware:"
 - Do not remove any essential information
 
 ## Original Chapter Content
@@ -105,16 +104,16 @@ Based on the learner's background, adapt the content by:
 Return the personalized chapter content in markdown format. Ensure it flows naturally and integrates personalization seamlessly."""
 
 
-# OpenAI client
-_client: AsyncOpenAI | None = None
+# Google AI state
+_initialized = False
 
 
-def get_openai_client() -> AsyncOpenAI:
-    """Get or create OpenAI client instance."""
-    global _client
-    if _client is None:
-        _client = AsyncOpenAI(api_key=settings.openai_api_key)
-    return _client
+def _init_google_ai() -> None:
+    """Initialize Google AI client."""
+    global _initialized
+    if not _initialized:
+        genai.configure(api_key=settings.google_api_key)
+        _initialized = True
 
 
 def get_chapter_path(chapter_id: str) -> Path | None:
@@ -178,7 +177,7 @@ async def generate_personalized_content(
     user: User,
 ) -> str:
     """Generate personalized content using LLM."""
-    client = get_openai_client()
+    _init_google_ai()
 
     # Format hardware list
     hardware = ", ".join(user.hardware_available) if user.hardware_available else "simulation_only"
@@ -190,20 +189,17 @@ async def generate_personalized_content(
         content=original_content,
     )
 
-    response = await client.chat.completions.create(
-        model=PERSONALIZATION_MODEL,
-        messages=[
-            {
-                "role": "system",
-                "content": "You are an expert educational content adapter specializing in robotics and AI education.",
-            },
-            {"role": "user", "content": prompt},
-        ],
-        max_tokens=MAX_TOKENS,
-        temperature=TEMPERATURE,
+    model = genai.GenerativeModel(
+        PERSONALIZATION_MODEL,
+        generation_config=genai.GenerationConfig(
+            max_output_tokens=MAX_TOKENS,
+            temperature=TEMPERATURE,
+        ),
     )
 
-    return response.choices[0].message.content or original_content
+    response = model.generate_content(prompt)
+
+    return response.text or original_content
 
 
 async def personalize_chapter(

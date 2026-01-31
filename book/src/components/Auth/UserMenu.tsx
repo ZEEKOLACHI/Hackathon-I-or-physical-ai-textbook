@@ -3,6 +3,7 @@
  */
 
 import React, { useState } from 'react';
+import BrowserOnly from '@docusaurus/BrowserOnly';
 import { useAuth } from './AuthProvider';
 import { SignInForm } from './SignInForm';
 import { SignUpForm } from './SignUpForm';
@@ -10,7 +11,8 @@ import styles from './Auth.module.css';
 
 type AuthMode = 'signin' | 'signup' | null;
 
-export function UserMenu(): JSX.Element {
+// Inner component that uses auth hooks (browser-only)
+function UserMenuContent(): JSX.Element {
   const { user, profile, isLoading, isAuthenticated, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>(null);
@@ -108,6 +110,15 @@ export function UserMenu(): JSX.Element {
         </div>
       )}
     </div>
+  );
+}
+
+// Wrapper component that handles SSR
+export function UserMenu(): JSX.Element {
+  return (
+    <BrowserOnly fallback={<div className={styles.userMenuLoading}>...</div>}>
+      {() => <UserMenuContent />}
+    </BrowserOnly>
   );
 }
 

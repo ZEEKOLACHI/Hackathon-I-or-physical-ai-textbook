@@ -11,19 +11,34 @@ from src.api.middleware.rate_limiter import RateLimitMiddleware
 from src.api.routes import auth, chat, health, personalize, translate, users
 from src.config import settings
 from src.db.postgres import close_db, init_db
-from src.db.qdrant import close_qdrant, init_qdrant
+from src.db.vector_store import close_store, init_store
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan context manager."""
-    # Startup
-    await init_db()
-    await init_qdrant()
+    # Startup - graceful init for serverless
+    try:
+        await init_db()
+    except Exception as e:
+        print(f"Warning: Database init failed (will retry on first request): {e}")
+
+    try:
+        await init_store()
+    except Exception as e:
+        print(f"Warning: Vector store init failed (will retry on first request): {e}")
+
     yield
+
     # Shutdown
-    await close_db()
-    await close_qdrant()
+    try:
+        await close_db()
+    except Exception:
+        pass
+    try:
+        await close_store()
+    except Exception:
+        pass
 
 
 def create_app() -> FastAPI:
@@ -53,13 +68,22 @@ def create_app() -> FastAPI:
     # Error handlers
     setup_error_handlers(app)
 
-    # Routes
+    # Root endpoint
+    @app.get("/")
+    async def root():
+        return {"status": "healthy", "message": "Physical AI Textbook API"}
+
+    # Routes - with /api/v1 prefix
     app.include_router(health.router, prefix="/api/v1", tags=["health"])
     app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
     app.include_router(users.router, prefix="/api/v1", tags=["users"])
     app.include_router(chat.router, prefix="/api/v1", tags=["chat", "search"])
     app.include_router(personalize.router, prefix="/api/v1", tags=["content"])
     app.include_router(translate.router, prefix="/api/v1", tags=["content"])
+
+    # Also mount at root for Vercel compatibility
+    app.include_router(health.router, tags=["health"])
+    app.include_router(chat.router, tags=["chat", "search"])
 
     return app
 

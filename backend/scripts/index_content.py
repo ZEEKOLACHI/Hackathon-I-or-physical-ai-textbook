@@ -22,9 +22,9 @@ import yaml
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.db.qdrant import (  # noqa: E402
+from src.db.vector_store import (  # noqa: E402
     get_collection_info,
-    init_qdrant,
+    init_store,
     upsert_vectors,
 )
 from src.services.embedding_service import chunk_text, get_embeddings  # noqa: E402
@@ -173,8 +173,7 @@ async def index_chapter(
     print(f"  Generating embeddings for {len(all_chunks)} chunks...")
     embeddings = await get_embeddings(all_chunks)
 
-    # Upsert to Qdrant
-    print(f"  Upserting to Qdrant...")
+    print(f"  Upserting to vector store...")
     await upsert_vectors(embeddings, all_payloads)
 
     print(f"  Indexed {len(all_chunks)} chunks from {chapter_path.name}")
@@ -192,9 +191,9 @@ async def index_all_chapters(force: bool = False) -> None:
     print("Physical AI Textbook Content Indexer")
     print("=" * 60)
 
-    # Initialize Qdrant
-    print("\nInitializing Qdrant...")
-    await init_qdrant()
+    # Initialize vector store
+    print("\nInitializing vector store...")
+    await init_store()
 
     # Get collection info
     try:

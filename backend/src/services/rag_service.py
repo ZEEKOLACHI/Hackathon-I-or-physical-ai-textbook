@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from src.db.qdrant import search_vectors
+from src.db.vector_store import search_vectors
 from src.services.embedding_service import get_embedding
 
 

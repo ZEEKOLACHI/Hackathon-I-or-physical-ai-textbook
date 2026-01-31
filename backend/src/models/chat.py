@@ -5,8 +5,8 @@ from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, func
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import DateTime, ForeignKey, JSON, String, Text, func
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.models.base import Base, TimestampMixin, UUIDMixin
@@ -88,7 +88,7 @@ class ChatMessage(Base, UUIDMixin, TimestampMixin):
         nullable=False,
     )
     citations: Mapped[list[dict] | None] = mapped_column(
-        JSONB,
+        JSON,
         nullable=True,
         default=list,
     )

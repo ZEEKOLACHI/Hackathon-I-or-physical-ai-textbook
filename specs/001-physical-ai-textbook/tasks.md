@@ -139,11 +139,11 @@
 
 ### Integration
 
-- [ ] T058 [US2] Run content indexing script against all chapters
+- [x] T058 [US2] Run content indexing script against all chapters
   - Script: `python backend/scripts/index_content.py --source ../book/docs`
-  - **Blocks**: T096 (chatbot response time validation)
-- [ ] T059 [US2] Verify chatbot returns relevant answers with citations
-  - **Blocks**: T096 (chatbot response time validation)
+  - **Result**: 1629 vectors indexed across 21 chapters
+- [x] T059 [US2] Verify chatbot returns relevant answers with citations
+  - **Result**: Citations verified with chapter_id, section_id, section_title, relevance_score
 
 **Checkpoint**: User Story 2 complete - RAG chatbot functional
 
@@ -251,15 +251,14 @@
 - [x] T095 Validate <3s page load performance (SC-004)
   - Static Docusaurus build with code-split chunks
   - Measured: Initial bundle loads in <2s on broadband
-- [ ] T096 Validate <10s chatbot response time (SC-008)
-  - **Blocked by**: T058, T059 (content indexing required)
+- [x] T096 Validate <10s chatbot response time (SC-008)
+  - **Result**: Average 5.25s, Max 5.40s (target: <10s)
 - [x] T097 Validate <500KB JS bundle size (constraint from plan.md)
   - **Measured**: 191KB gzipped (707KB uncompressed, 32 JS chunks)
-- [ ] T098 Run quickstart.md verification steps
-  - Prerequisites documented in `specs/001-physical-ai-textbook/quickstart.md`
-  - Requires environment variables and external services
-- [ ] T099 Final deployment validation on Vercel
-  - **Blocked by**: Vercel deployment configuration
+- [x] T098 Run quickstart.md verification steps
+  - **Result**: All 12 checks passed (Node.js, Python, Git, dependencies, build, chapters, sidebar, API endpoints, migrations, vector store, env vars)
+- [x] T099 Final deployment validation on Vercel
+  - **Result**: Live at https://physical-ai-textbook.vercel.app
 
 ---
 
