@@ -19,7 +19,7 @@ const getBackendUrl = (): string => {
     }
   }
   // Default: production URL (will be overridden in dev by local proxy or direct calls)
-  return 'https://physical-ai-backend.vercel.app';
+  return 'https://backend-theta-eight-41.vercel.app';
 };
 
 const API_BASE_URL = getBackendUrl();

@@ -3,7 +3,7 @@ import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
 // Backend URL - set via BACKEND_URL env var at build time
-const backendUrl = process.env.BACKEND_URL || 'https://physical-ai-backend.vercel.app';
+const backendUrl = process.env.BACKEND_URL || 'https://backend-theta-eight-41.vercel.app';
 
 const config: Config = {
   title: 'Physical AI & Humanoid Robotics',
