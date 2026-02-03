@@ -1,9 +1,9 @@
 /**
- * ChatBot component - Main container with session management
+ * ChatBot component - Stateless Q&A chat interface
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import type { ChatMessage as ChatMessageType, ChatSession, Citation } from '../../services/api';
+import React, { useState, useEffect, useRef } from 'react';
+import type { ChatMessage as ChatMessageType, Citation } from '../../services/api';
 import { chatApi } from '../../services/api';
 import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
@@ -16,7 +16,6 @@ interface ChatBotProps {
 
 export function ChatBot({ contextChapter, onCitationClick }: ChatBotProps): JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
-  const [session, setSession] = useState<ChatSession | null>(null);
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,71 +29,42 @@ export function ChatBot({ contextChapter, onCitationClick }: ChatBotProps): JSX.
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Initialize or get session
-  const initSession = useCallback(async () => {
-    if (session) return session;
-
-    try {
-      const newSession = await chatApi.createSession(contextChapter);
-      setSession(newSession);
-      return newSession;
-    } catch (err) {
-      console.error('Failed to create session:', err);
-      setError('Failed to start chat session. Please try again.');
-      return null;
-    }
-  }, [session, contextChapter]);
-
-  // Handle sending a message
+  // Handle sending a message (stateless - no session required)
   const handleSend = async (content: string) => {
     setError(null);
     setIsLoading(true);
 
-    try {
-      // Ensure we have a session
-      const currentSession = await initSession();
-      if (!currentSession) {
-        setIsLoading(false);
-        return;
-      }
+    // Add user message optimistically
+    const userMessage: ChatMessageType = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content,
+      citations: [],
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, userMessage]);
 
-      // Add user message optimistically
-      const tempUserMessage: ChatMessageType = {
-        id: `temp-${Date.now()}`,
-        role: 'user',
-        content,
-        citations: [],
+    try {
+      // Use stateless ask endpoint
+      const response = await chatApi.ask(content, selectedText || undefined);
+
+      // Add assistant response
+      const assistantMessage: ChatMessageType = {
+        id: `assistant-${Date.now()}`,
+        role: 'assistant',
+        content: response.answer,
+        citations: response.citations,
         created_at: new Date().toISOString(),
       };
-      setMessages((prev) => [...prev, tempUserMessage]);
-
-      // Send to API
-      const response = await chatApi.sendMessage(
-        currentSession.id,
-        content,
-        selectedText || undefined
-      );
-
-      // Update with real messages
-      setMessages((prev) => {
-        const filtered = prev.filter((m) => m.id !== tempUserMessage.id);
-        return [
-          ...filtered,
-          { ...tempUserMessage, id: `user-${Date.now()}` },
-          response.message,
-        ];
-      });
-
-      // Update session
-      setSession(response.session);
+      setMessages((prev) => [...prev, assistantMessage]);
 
       // Clear selection
       setSelectedText(null);
     } catch (err) {
       console.error('Failed to send message:', err);
-      setError('Failed to send message. Please try again.');
-      // Remove optimistic message on error
-      setMessages((prev) => prev.filter((m) => !m.id.startsWith('temp-')));
+      setError('Failed to get response. Please try again.');
+      // Remove optimistic user message on error
+      setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
     } finally {
       setIsLoading(false);
     }

@@ -24,8 +24,8 @@ class Settings(BaseSettings):
     # Google AI (Gemini)
     google_api_key: str = ""
 
-    # Database
-    database_url: str = "sqlite+aiosqlite:///./local.db"
+    # Database (use /tmp for serverless compatibility)
+    database_url: str = "sqlite+aiosqlite:////tmp/chat.db"
 
     # Better-Auth
     better_auth_secret: str = ""

@@ -328,3 +328,57 @@ async def search_textbook_content(
         results=[SearchResultResponse(**r) for r in formatted],
         query=q,
     )
+
+
+# --- Stateless Chat Endpoint (for serverless) ---
+
+
+class AskRequest(BaseModel):
+    """Request for stateless chat."""
+
+    question: str = Field(..., min_length=1, max_length=2000)
+    selected_text: str | None = Field(None, max_length=5000)
+
+
+class AskResponse(BaseModel):
+    """Response for stateless chat."""
+
+    answer: str
+    citations: list[CitationResponse]
+
+
+@router.post(
+    "/chat/ask",
+    response_model=AskResponse,
+    summary="Ask a question (stateless)",
+    responses={400: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
+)
+async def ask_question(request: AskRequest) -> AskResponse:
+    """
+    Stateless Q&A endpoint - no session required.
+    Ideal for serverless deployments where sessions don't persist.
+    """
+    # Get context from RAG
+    context, citations = await get_context_for_query(
+        query=request.question,
+        selected_text=request.selected_text,
+    )
+
+    # Generate response
+    if request.selected_text:
+        answer = await generate_response_with_selected_text(
+            user_message=request.question,
+            selected_text=request.selected_text,
+            context=context,
+        )
+    else:
+        answer = await generate_response(
+            user_message=request.question,
+            context=context,
+            conversation_history=[],
+        )
+
+    return AskResponse(
+        answer=answer,
+        citations=[CitationResponse(**c) for c in citations],
+    )

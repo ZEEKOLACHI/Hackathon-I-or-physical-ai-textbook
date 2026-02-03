@@ -14,16 +14,26 @@ VECTOR_SIZE = 768  # Google text-embedding-004 dimension
 # In-memory store
 _vectors: list[dict[str, Any]] = []
 _dirty: bool = False
+_loaded: bool = False
 
 
 def _load() -> None:
     """Load vectors from JSON file into memory."""
-    global _vectors
+    global _vectors, _loaded
+    if _loaded:
+        return
     if STORE_PATH.exists():
         data = json.loads(STORE_PATH.read_text(encoding="utf-8"))
         _vectors = data.get("vectors", [])
     else:
         _vectors = []
+    _loaded = True
+
+
+def _ensure_loaded() -> None:
+    """Ensure vectors are loaded (lazy initialization for serverless)."""
+    if not _loaded:
+        _load()
 
 
 def _save() -> None:
@@ -101,6 +111,7 @@ async def search_vectors(
     Returns:
         List of search results with payloads and scores
     """
+    _ensure_loaded()
     if not _vectors:
         return []
 
@@ -153,6 +164,7 @@ async def delete_by_chapter(chapter_id: str) -> None:
 
 async def get_collection_info() -> dict[str, Any]:
     """Get collection statistics."""
+    _ensure_loaded()
     return {
         "name": "textbook_content",
         "vectors_count": len(_vectors),

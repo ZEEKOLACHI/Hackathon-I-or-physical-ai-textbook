@@ -114,8 +114,24 @@ export interface SearchResult {
   score: number;
 }
 
+// Stateless chat response
+export interface AskResponse {
+  answer: string;
+  citations: Citation[];
+}
+
 // Chat API
 export const chatApi = {
+  // Stateless ask endpoint (recommended for serverless)
+  ask: async (question: string, selectedText?: string): Promise<AskResponse> => {
+    const response = await apiClient.post<AskResponse>('/chat/ask', {
+      question,
+      selected_text: selectedText,
+    });
+    return response.data;
+  },
+
+  // Legacy session-based methods (may not work on serverless)
   createSession: async (contextChapter?: string): Promise<ChatSession> => {
     const response = await apiClient.post<ChatSession>('/chat/sessions', {
       context_chapter: contextChapter,

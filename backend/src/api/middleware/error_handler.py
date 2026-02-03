@@ -126,7 +126,7 @@ def setup_error_handlers(app: FastAPI) -> None:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
                 "error": "internal_error",
-                "message": "An unexpected error occurred",
-                "details": {},
+                "message": str(exc),
+                "details": {"type": type(exc).__name__},
             },
         )
